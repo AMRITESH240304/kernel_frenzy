@@ -1,0 +1,6 @@
+pydantic[email]
+fastapi==0.115.8
+uvicorn==0.34.0
+pydantic-settings==2.7.1
+supabase==2.13.0
+psutil==7.0.0
