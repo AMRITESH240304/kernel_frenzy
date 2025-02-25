@@ -1,11 +1,11 @@
-from fastapi import APIRouter,WebSocket,WebSocketDisconnect
+from fastapi import APIRouter,WebSocket,WebSocketDisconnect,UploadFile,File,HTTPException,Form
 import psutil
 import asyncio
 import json
 from supabase import create_client, Client
-from pydantic import BaseModel
 from config import settings
 from ws.ws_manager import manager
+from service.models.model import *
 
 router = APIRouter()
 
@@ -32,12 +32,6 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"❌ WebSocket error: {e}")
     finally:
         manager.disconnect(websocket)
-
-
-class UserInfo(BaseModel):
-    id:str
-    email:str
-    name:str
     
 supabase_url = settings.SUPABASE_PROJECT_URL
 supabase_key = settings.SUPABASE_API_KEY
@@ -45,11 +39,35 @@ supabase: Client = create_client(supabase_url, supabase_key)
     
 @router.post("/userinfo")
 def get_user_info(userInfo:UserInfo):
-    data = {
-        "id": userInfo.id,
-        "email": userInfo.email,
-        "name": userInfo.name
-    }
     
-    supabase.table("user").insert(data).execute()
+    supabase.table("user").insert(userInfo.model_dump()).execute()
     return {"message": "User info added successfully!"}
+
+@router.post("/uploadcsv")
+async def upload_csv(user_id: str = Form(), file: UploadFile = File(...)):
+    try:
+        user_check = supabase.table("user").select("id").eq("id", user_id).execute()
+
+        if not user_check.data:
+            raise HTTPException(status_code=403, detail="User ID not found. Upload not allowed.")
+
+        bucket_name = "csv_files"
+        file_content = await file.read()
+        file_path = f"{user_id}/{file.filename}"  
+
+        response = supabase.storage.from_(bucket_name).upload(
+            path=file_path,
+            file=file_content,
+            file_options={
+                "content-type": file.content_type,
+                "cacheControl": "3600",
+                "upsert": False,
+            }
+        )
+
+        public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+
+        return {"message": "File uploaded successfully", "url": public_url}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
