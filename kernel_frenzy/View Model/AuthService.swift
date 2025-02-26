@@ -11,7 +11,7 @@ import Foundation
 // Singleton Client instance
 class AppwriteService {
     static let shared = AppwriteService()
-    
+
     let client: Client
     let account: Account
 
@@ -50,10 +50,22 @@ class AuthService: ObservableObject {
 
     func login() async throws {
         do {
-            _ = try await appwrite.account.createEmailPasswordSession(
+            let user = try await appwrite.account.createEmailPasswordSession(
                 email: email,
                 password: password
             )
+
+            if let storedUserId = UserDefaults.standard.string(forKey: "userId")
+            {
+                if storedUserId != user.userId {
+                    UserDefaults.standard.set(user.userId, forKey: "userId")
+                    print("User ID updated to \(user.userId)")
+                }
+            } else {
+                UserDefaults.standard.set(user.userId, forKey: "userId")
+                print("User ID saved: \(user.userId)")
+            }
+
         } catch {
             print("Login failed: \(error.localizedDescription)")
             throw error

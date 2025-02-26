@@ -5,6 +5,7 @@ struct HomeView: View {
     @ObservedObject var webSocketManager: WebSocketManager
     @State private var showDocumentPicker = false
     @State private var selectedFile: URL?
+    @State private var fileUrl = []
     @State private var cpuDataPoints: [(Date, Double)] = []
     @State private var memoryDataPoints: [(Date, Double)] = []
 
@@ -85,8 +86,11 @@ struct HomeView: View {
                     }
                 }.sheet(isPresented: $showDocumentPicker) {
                     DocumentPicker { url in
-                        self.selectedFile = url  
+                        self.selectedFile = url
                         showDocumentPicker = false
+                        Task{
+                            await Post().uploadFile(selectedFile!)
+                        }
                     }
                 }
 

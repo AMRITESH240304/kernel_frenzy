@@ -46,8 +46,68 @@ class Post {
             }.resume()
         }
     
-    func uploadFile() async {
-        
+    func uploadFile(_ fileUrl: URL) async {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            print("User ID not found in UserDefaults")
+            return
+        }
+
+        guard let serverURL = URL(string: "http://10.3.251.71:8000/uploadcsv") else {
+            print("Invalid URL")
+            return
+        }
+
+        guard let fileData = try? Data(contentsOf: fileUrl) else {
+            print("Failed to read file data")
+            return
+        }
+
+        var request = URLRequest(url: serverURL)
+        request.httpMethod = "POST"
+
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(userId)\r\n".data(using: .utf8)!)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileUrl.lastPathComponent)\"\r\n".data(using: .utf8)!)
+
+        let fileExtension = fileUrl.pathExtension.lowercased()
+        let contentType: String
+        switch fileExtension {
+        case "pdf":
+            contentType = "application/pdf"
+        case "csv":
+            contentType = "text/csv"
+        case "txt":
+            contentType = "text/plain"
+        default:
+            contentType = "application/octet-stream"
+        }
+        body.append("Content-Type: \(contentType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse {
+                print("HTTP Status Code: \(httpResponse.statusCode)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("Response: \(responseString)")
+                }
+            }
+        } catch {
+            print("Upload failed with error: \(error)")
+        }
     }
     
 

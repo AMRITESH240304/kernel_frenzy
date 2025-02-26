@@ -36,7 +36,7 @@ class WebSocketManager: ObservableObject {
                 print("❌ WebSocket error: \(error.localizedDescription)")
             }
             
-            self?.receiveData() // Keep listening
+            self?.receiveData()
         }
     }
     
