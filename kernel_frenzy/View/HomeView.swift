@@ -89,7 +89,7 @@ struct HomeView: View {
                         self.selectedFile = url
                         showDocumentPicker = false
                         Task{
-                            await Post().uploadFile(selectedFile!)
+                            try await Post().uploadFile(selectedFile!)
                         }
                     }
                 }

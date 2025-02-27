@@ -9,50 +9,56 @@ import Foundation
 
 class Post {
     init() {}
-    
+
     func makeGetRequest() {
-            let urlString = "http://10.3.251.71:8000/"
-            guard let url = URL(string: urlString) else {
-                print("Invalid URL")
+        let urlString = "http://10.3.251.71:8000/"
+        guard let url = URL(string: urlString) else {
+            print("Invalid URL")
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
                 return
             }
-            
-        URLSession.shared.dataTask(with: url) { data, response, error in
-                if let error = error {
-                    print("Error: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                    print("Invalid response")
-                    return
-                }
-                
-                guard let data = data else {
-                    print("No data received")
-                    return
-                }
-                
-                do {
-                    let jsonObject = try JSONSerialization.jsonObject(
-                        with: data, options: [])
-                    let jsonData = try JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
-                    let jsonString = String(data: jsonData, encoding: .utf8) ?? "Unable to decode JSON"
-                    print(jsonString)
 
-                } catch {
-                    print("JSON decoding error: \(error)")
-                }
-            }.resume()
-        }
-    
-    func uploadFile(_ fileUrl: URL) async {
+            guard let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode == 200
+            else {
+                print("Invalid response")
+                return
+            }
+
+            guard let data = data else {
+                print("No data received")
+                return
+            }
+
+            do {
+                let jsonObject = try JSONSerialization.jsonObject(
+                    with: data, options: [])
+                let jsonData = try JSONSerialization.data(
+                    withJSONObject: jsonObject, options: .prettyPrinted)
+                let jsonString =
+                    String(data: jsonData, encoding: .utf8)
+                    ?? "Unable to decode JSON"
+                print(jsonString)
+
+            } catch {
+                print("JSON decoding error: \(error)")
+            }
+        }.resume()
+    }
+
+    func uploadFile(_ fileUrl: URL) async throws {
         guard let userId = UserDefaults.standard.string(forKey: "userId") else {
             print("User ID not found in UserDefaults")
             return
         }
 
-        guard let serverURL = URL(string: "http://10.3.251.71:8000/uploadcsv") else {
+        guard let serverURL = URL(string: "http://10.3.251.71:8000/uploadcsv")
+        else {
             print("Invalid URL")
             return
         }
@@ -66,16 +72,22 @@ class Post {
         request.httpMethod = "POST"
 
         let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type")
 
         var body = Data()
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append(
+            "Content-Disposition: form-data; name=\"user_id\"\r\n\r\n".data(
+                using: .utf8)!)
         body.append("\(userId)\r\n".data(using: .utf8)!)
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileUrl.lastPathComponent)\"\r\n".data(using: .utf8)!)
+        body.append(
+            "Content-Disposition: form-data; name=\"file\"; filename=\"\(fileUrl.lastPathComponent)\"\r\n"
+                .data(using: .utf8)!)
 
         let fileExtension = fileUrl.pathExtension.lowercased()
         let contentType: String
@@ -98,7 +110,8 @@ class Post {
         request.httpBody = body
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(
+                for: request)
             if let httpResponse = response as? HTTPURLResponse {
                 print("HTTP Status Code: \(httpResponse.statusCode)")
                 if let responseString = String(data: data, encoding: .utf8) {
@@ -106,10 +119,36 @@ class Post {
                 }
             }
         } catch {
-            print("Upload failed with error: \(error)")
+            throw error
         }
     }
-    
+
+    func getallFile() async throws -> [FileItem] {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        let urlString = "http://10.3.251.71:8000/getcsv/" + userId
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+            httpResponse.statusCode == 200
+        else {
+            throw URLError(.badServerResponse)
+        }
+
+        let decoder = JSONDecoder()
+        let apiResponse = try decoder.decode(APIResponse.self, from: data)
+        return apiResponse.data
+    }
 
     func saveUserInfo(_ id: UUID, _ name: String, _ email: String) async {
         let urlString = "http://10.3.251.71:8000/userinfo"
@@ -133,8 +172,9 @@ class Post {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
+            let (data, response) = try await URLSession.shared.data(
+                for: request)
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 print("Invalid response")
                 return
@@ -146,10 +186,12 @@ class Post {
                 print("Failed with status code: \(httpResponse.statusCode)")
             }
 
-            if let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) {
+            if let jsonResponse = try? JSONSerialization.jsonObject(
+                with: data, options: [])
+            {
                 print("Response: \(jsonResponse)")
             }
-            
+
         } catch {
             print("Request failed: \(error)")
         }
