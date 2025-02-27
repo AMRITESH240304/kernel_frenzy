@@ -5,6 +5,7 @@ import json
 from supabase import create_client, Client
 from config import settings
 from ws.ws_manager import manager
+from service.db.db import supabase
 from service.models.model import *
 
 router = APIRouter()
@@ -32,10 +33,6 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"❌ WebSocket error: {e}")
     finally:
         manager.disconnect(websocket)
-    
-supabase_url = settings.SUPABASE_PROJECT_URL
-supabase_key = settings.SUPABASE_API_KEY
-supabase: Client = create_client(supabase_url, supabase_key)
     
 @router.post("/userinfo")
 def get_user_info(userInfo:UserInfo):
@@ -68,6 +65,38 @@ async def upload_csv(user_id: str = Form(), file: UploadFile = File(...)):
         public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
 
         return {"message": "File uploaded successfully", "url": public_url}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/getcsv/{user_id}")
+def get_csv(user_id: str):
+    try:
+        user_check = supabase.table("user").select("id").eq("id", user_id).execute()
+
+        if not user_check.data:
+            raise HTTPException(status_code=403, detail="User ID not found. Upload not allowed.")
+
+        bucket_name = "csv_files"
+        response = supabase.storage.from_(bucket_name).list(user_id)
+
+        return {"message": "Files retrieved successfully", "data": response}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.delete("/deletecsv/{user_id}/{file_name}")
+def delete_csv(user_id: str, file_name: str):
+    try:
+        user_check = supabase.table("user").select("id").eq("id", user_id).execute()
+
+        if not user_check.data:
+            raise HTTPException(status_code=403, detail="User ID not found. Upload not allowed.")
+
+        bucket_name = "csv_files"
+        response = supabase.storage.from_(bucket_name).remove([f"{user_id}/{file_name}"])
+
+        return {"message": "File deleted successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
