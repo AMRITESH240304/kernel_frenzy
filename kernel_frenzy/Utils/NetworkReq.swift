@@ -57,7 +57,9 @@ class Post {
             return
         }
 
-        guard let serverURL = URL(string: "http://10.3.251.71:8000/uploadcsv")
+        guard
+            let serverURL = URL(
+                string: "https://kernel-frenzy.onrender.com/uploadcsv")
         else {
             print("Invalid URL")
             return
@@ -128,7 +130,7 @@ class Post {
             throw URLError(.userAuthenticationRequired)
         }
 
-        let urlString = "http://10.3.251.71:8000/getcsv/" + userId
+        let urlString = "https://kernel-frenzy.onrender.com/getcsv/" + userId
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
@@ -148,6 +150,40 @@ class Post {
         let decoder = JSONDecoder()
         let apiResponse = try decoder.decode(APIResponse.self, from: data)
         return apiResponse.data
+    }
+
+    func deleteFile(_ fileName: String) async throws {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        guard
+            let url = NetworkURL.baseURL.appendingPathComponent("deletecsv").appendingPathComponent(userId)
+                .appendingPathComponent(fileName) as URL?
+        else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+
+        do {
+            let (_, response) = try await URLSession.shared.data(
+                for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw URLError(.cannotRemoveFile)  // Customize error if needed
+            }
+
+            print("✅ File deleted successfully: \(fileName)")
+
+        } catch {
+            print("❌ Error deleting file: \(error.localizedDescription)")
+            throw error
+        }
+
     }
 
     func saveUserInfo(_ id: UUID, _ name: String, _ email: String) async {

@@ -12,7 +12,7 @@ class WebSocketManager: ObservableObject {
     }
     
     func connectWebSocket() {
-        guard let url = URL(string: "ws://10.3.251.71:8000/ws") else { return }
+        guard let url = NetworkURL.ws as URL? else { return }
         urlSession = URLSession(configuration: .default)
         webSocketTask = urlSession?.webSocketTask(with: url)
         webSocketTask?.resume()

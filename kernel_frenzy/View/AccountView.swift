@@ -29,13 +29,22 @@ struct AccountView: View {
                             FileCardView(
                                 file: file,
                                 deleteAction: {
-                                    if let index = files.firstIndex(where: {
-                                        $0.id == file.id
-                                    }) {
-                                        files.remove(at: index)
+                                    Task {
+                                        do {
+                                            try await Post().deleteFile(file.name)
+                                            if let index = files.firstIndex(
+                                                where: { $0.id == file.id })
+                                            {
+                                                files.remove(at: index)
+                                            }
+                                        } catch {
+                                            print(
+                                                "Error deleting file: \(error)")
+                                        }
                                     }
                                 }
                             )
+
                         }
                     }.padding()
                 }
@@ -115,6 +124,7 @@ struct FileCardView: View {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
+
         }
         .padding()
         .background(Color(.systemGray6))
