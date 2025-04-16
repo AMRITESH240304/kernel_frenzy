@@ -89,7 +89,13 @@ struct HomeView: View {
                         self.selectedFile = url
                         showDocumentPicker = false
                         Task{
-                            try await Post().uploadFile(selectedFile!)
+                            do {
+                                try await Post().uploadFile(selectedFile!)
+                                // Notify AccountView of new file
+                                NotificationCenter.default.post(name: .fileUploaded, object: nil)
+                            } catch {
+                                print("Error uploading file: \(error)")
+                            }
                         }
                     }
                 }
@@ -114,12 +120,14 @@ struct HomeView: View {
             cpuDataPoints.append((now, webSocketManager.cpuUsage))
             memoryDataPoints.append((now, webSocketManager.memoryUsage))
 
-            if cpuDataPoints.count > 50 {
+            if cpuDataPoints.count > 50 && memoryDataPoints.count > 50 {
                 cpuDataPoints.removeFirst()
-            }
-            if memoryDataPoints.count > 50 {
                 memoryDataPoints.removeFirst()
             }
         }
     }
+}
+
+extension Notification.Name {
+    static let fileUploaded = Notification.Name("FileUploaded")
 }
