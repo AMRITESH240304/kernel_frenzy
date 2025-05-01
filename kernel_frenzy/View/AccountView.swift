@@ -37,7 +37,7 @@ struct AccountView: View {
                                             if let index = files.firstIndex(where: { $0.id == file.id }) {
                                                 files.remove(at: index)
                                                 // Update cache after deletion
-                                                CacheManager.shared.cacheFiles(files, forKey: cacheKey)
+                                                await CacheManager.shared.cacheFiles(files, forKey: cacheKey)
                                             }
                                         } catch {
                                             print("Error deleting file: \(error)")
@@ -58,7 +58,7 @@ struct AccountView: View {
         .onReceive(NotificationCenter.default.publisher(for: .fileUploaded)) { _ in
                     Task {
                         // Clear cache and reload files
-                        CacheManager.shared.clearCache(forKey: cacheKey)
+                        await CacheManager.shared.clearCache(forKey: cacheKey)
                         await loadFiles()
                     }
                 }
@@ -68,7 +68,7 @@ struct AccountView: View {
         isLoading = true
         
         // Check cache first
-        if let cachedFiles = CacheManager.shared.getCachedFiles(forKey: cacheKey) {
+        if let cachedFiles = await CacheManager.shared.getCachedFiles(forKey: cacheKey) {
             files = cachedFiles
             isLoading = false
             return
@@ -79,7 +79,7 @@ struct AccountView: View {
             files = fetchedFiles
             // Store in cache
             print("Network call for files")
-            CacheManager.shared.cacheFiles(files, forKey: cacheKey)
+            await CacheManager.shared.cacheFiles(files, forKey: cacheKey)
         } catch {
             print("Error fetching files: \(error)")
         }
@@ -150,18 +150,18 @@ struct FileCardView: View {
     }
     
     private func startTraining() {
-        isTraining = true
-        trainingProgress = 0.0
-        
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
-            if trainingProgress < 1.0 {
-                trainingProgress += 0.02
-            } else {
-                timer.invalidate()
-                isTraining = false
-                isTrained = true
-            }
-        }
+//        isTraining = true
+//        trainingProgress = 0.0
+//        
+//        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+//            if trainingProgress < 1.0 {
+//                trainingProgress += 0.02
+//            } else {
+//                timer.invalidate()
+//                isTraining = false
+//                isTrained = true
+//            }
+//        }
     }
 }
 

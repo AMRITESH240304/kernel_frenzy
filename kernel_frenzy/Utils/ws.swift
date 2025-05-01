@@ -1,5 +1,7 @@
 import Foundation
+import Combine
 
+@MainActor
 class WebSocketManager: ObservableObject {
     @Published var cpuUsage: Double = 0.0
     @Published var memoryUsage: Double = 0.0
@@ -8,7 +10,8 @@ class WebSocketManager: ObservableObject {
     private var webSocketTask: URLSessionWebSocketTask?
 
     init() {
-//        connectWebSocket()
+        // Optionally call connectWebSocket here if needed
+        // connectWebSocket()
     }
     
     func connectWebSocket() {
@@ -22,21 +25,22 @@ class WebSocketManager: ObservableObject {
     
     func receiveData() {
         webSocketTask?.receive { [weak self] result in
-            switch result {
-            case .success(let message):
-                switch message {
-                case .string(let text):
-                    DispatchQueue.main.async {
-                        self?.parseAndUpdateGraph(from: text)
+            guard let self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let message):
+                    switch message {
+                    case .string(let text):
+                        self.parseAndUpdateGraph(from: text)
+                    default:
+                        break
                     }
-                default:
-                    break
+                case .failure(let error):
+                    print("❌ WebSocket error: \(error.localizedDescription)")
                 }
-            case .failure(let error):
-                print("❌ WebSocket error: \(error.localizedDescription)")
+                
+                self.receiveData()
             }
-            
-            self?.receiveData()
         }
     }
     
@@ -45,10 +49,8 @@ class WebSocketManager: ObservableObject {
         
         do {
             let decodedData = try JSONDecoder().decode([String: Double].self, from: jsonData)
-            DispatchQueue.main.async {
-                self.cpuUsage = decodedData["cpu"] ?? 0.0
-                self.memoryUsage = decodedData["memory"] ?? 0.0
-            }
+            self.cpuUsage = decodedData["cpu"] ?? 0.0
+            self.memoryUsage = decodedData["memory"] ?? 0.0
         } catch {
             print("❌ Decoding error: \(error)")
         }

@@ -5,12 +5,12 @@
 //  Created by admin49 on 06/02/25.
 //
 
-import Appwrite
+@preconcurrency import Appwrite
 import Foundation
 
 // Singleton Client instance
 class AppwriteService {
-    static let shared = AppwriteService()
+    @MainActor static let shared = AppwriteService()
 
     let client: Client
     let account: Account

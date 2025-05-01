@@ -115,14 +115,16 @@ struct HomeView: View {
 
     private func startDataLogging() {
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            let now = Date()
+            DispatchQueue.main.async {
+                let now = Date()
 
-            cpuDataPoints.append((now, webSocketManager.cpuUsage))
-            memoryDataPoints.append((now, webSocketManager.memoryUsage))
+                cpuDataPoints.append((now, webSocketManager.cpuUsage))
+                memoryDataPoints.append((now, webSocketManager.memoryUsage))
 
-            if cpuDataPoints.count > 50 && memoryDataPoints.count > 50 {
-                cpuDataPoints.removeFirst()
-                memoryDataPoints.removeFirst()
+                if cpuDataPoints.count > 50 && memoryDataPoints.count > 50 {
+                    cpuDataPoints.removeFirst()
+                    memoryDataPoints.removeFirst()
+                }
             }
         }
     }
