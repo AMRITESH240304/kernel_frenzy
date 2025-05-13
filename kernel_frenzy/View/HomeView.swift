@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var fileUrl = []
     @State private var cpuDataPoints: [(Date, Double)] = []
     @State private var memoryDataPoints: [(Date, Double)] = []
+    @State private var isChartVisible: Bool = false 
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -21,60 +22,83 @@ struct HomeView: View {
 
             ScrollView {
                 VStack {
-                    Text(
-                        "CPU Usage: \(webSocketManager.cpuUsage, specifier: "%.2f")%"
-                    )
-                    .font(.headline)
-                    .padding(.top, 10)
+                    Text("CPU Usage: \(webSocketManager.cpuUsage, specifier: "%.2f")%")
+                        .font(.headline)
+                        .padding(.top, 10)
 
                     Chart(cpuDataPoints, id: \.0) { (timestamp, value) in
                         LineMark(
                             x: .value("Time", timestamp),
                             y: .value("CPU Usage (%)", value)
                         )
-                        .foregroundStyle(.red)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.red, .orange]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .interpolationMethod(.catmullRom) // Smooth curve
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        .shadow(radius: 2)
                     }
                     .frame(height: 150)
                     .padding()
+                    .opacity(isChartVisible ? 1 : 0) // Initial fade-in
+                    .animation(.easeInOut(duration: 0.5), value: isChartVisible)
                 }
 
                 VStack {
-                    Text(
-                        "Memory Usage: \(webSocketManager.memoryUsage, specifier: "%.2f")%"
-                    )
-                    .font(.headline)
-                    .padding(.top, 10)
+                    Text("Memory Usage: \(webSocketManager.memoryUsage, specifier: "%.2f")%")
+                        .font(.headline)
+                        .padding(.top, 10)
 
                     Chart(memoryDataPoints, id: \.0) { (timestamp, value) in
                         LineMark(
                             x: .value("Time", timestamp),
                             y: .value("Memory Usage (%)", value)
                         )
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.blue, .cyan]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .interpolationMethod(.catmullRom) // Smooth curve
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        .shadow(radius: 2)
                     }
                     .frame(height: 150)
                     .padding()
+                    .opacity(isChartVisible ? 1 : 0) // Initial fade-in
+                    .animation(.easeInOut(duration: 0.5), value: isChartVisible)
                 }
 
                 VStack {
                     Button(action: {
-                        showDocumentPicker = true
-                    }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray, lineWidth: 2)
-                                .frame(width: 200, height: 150)
-
-                            VStack {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.blue)
-
-                                Text("Upload File for Training")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                            }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showDocumentPicker = true
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
                         }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("Upload")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue)
+                                .shadow(color: .gray.opacity(0.3), radius: 4, x: 0, y: 2)
+                        )
+                        .scaleEffect(showDocumentPicker ? 0.96 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showDocumentPicker)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .padding()
@@ -84,14 +108,14 @@ struct HomeView: View {
                             .foregroundColor(.blue)
                             .padding()
                     }
-                }.sheet(isPresented: $showDocumentPicker) {
+                }
+                .sheet(isPresented: $showDocumentPicker) {
                     DocumentPicker { url in
                         self.selectedFile = url
                         showDocumentPicker = false
-                        Task{
+                        Task {
                             do {
                                 try await Post().uploadFile(selectedFile!)
-                                // Notify AccountView of new file
                                 NotificationCenter.default.post(name: .fileUploaded, object: nil)
                             } catch {
                                 print("Error uploading file: \(error)")
@@ -99,12 +123,12 @@ struct HomeView: View {
                         }
                     }
                 }
-
             }
 
             Spacer()
         }
         .onAppear {
+            isChartVisible = true // Trigger chart fade-in
             startDataLogging()
             webSocketManager.connectWebSocket()
         }
