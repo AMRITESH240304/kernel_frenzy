@@ -96,7 +96,7 @@ def delete_csv(user_id: str, file_name: str):
         bucket_name = "csv_files"
         response = supabase.storage.from_(bucket_name).remove([f"{user_id}/{file_name}"])
 
-        return {"message": "File deleted successfully"}
+        return {"message": f"File {file_name} deleted successfully", "data": response}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
