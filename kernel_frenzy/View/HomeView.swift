@@ -8,7 +8,7 @@ struct HomeView: View {
     @State private var fileUrl = []
     @State private var cpuDataPoints: [(Date, Double)] = []
     @State private var memoryDataPoints: [(Date, Double)] = []
-    @State private var isChartVisible: Bool = false 
+    @State private var isChartVisible: Bool = false
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -113,6 +113,7 @@ struct HomeView: View {
                     DocumentPicker { url in
                         self.selectedFile = url
                         showDocumentPicker = false
+                        // Handle file selection
                         Task {
                             do {
                                 try await Post().uploadFile(selectedFile!)
