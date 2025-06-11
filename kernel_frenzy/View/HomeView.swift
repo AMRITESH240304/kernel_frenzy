@@ -22,59 +22,22 @@ struct HomeView: View {
 
             ScrollView {
                 VStack {
-                    Text("CPU Usage: \(webSocketManager.cpuUsage, specifier: "%.2f")%")
-                        .font(.headline)
-                        .padding(.top, 10)
+                    GlassChartCard(
+                        title: "CPU Usage",
+                        dataPoints: cpuDataPoints,
+                        gradientColors: [.red, .orange]
+                    )
+                    .opacity(isChartVisible ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.5), value: isChartVisible)
 
-                    Chart(cpuDataPoints, id: \.0) { (timestamp, value) in
-                        LineMark(
-                            x: .value("Time", timestamp),
-                            y: .value("CPU Usage (%)", value)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.red, .orange]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .interpolationMethod(.catmullRom) // Smooth curve
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .shadow(radius: 2)
-                    }
-                    .frame(height: 150)
-                    .padding()
-                    .opacity(isChartVisible ? 1 : 0) // Initial fade-in
+                    GlassChartCard(
+                        title: "Memory Usage",
+                        dataPoints: memoryDataPoints,
+                        gradientColors: [.blue, .cyan]
+                    )
+                    .opacity(isChartVisible ? 1 : 0)
                     .animation(.easeInOut(duration: 0.5), value: isChartVisible)
                 }
-
-                VStack {
-                    Text("Memory Usage: \(webSocketManager.memoryUsage, specifier: "%.2f")%")
-                        .font(.headline)
-                        .padding(.top, 10)
-
-                    Chart(memoryDataPoints, id: \.0) { (timestamp, value) in
-                        LineMark(
-                            x: .value("Time", timestamp),
-                            y: .value("Memory Usage (%)", value)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.blue, .cyan]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .interpolationMethod(.catmullRom) // Smooth curve
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .shadow(radius: 2)
-                    }
-                    .frame(height: 150)
-                    .padding()
-                    .opacity(isChartVisible ? 1 : 0) // Initial fade-in
-                    .animation(.easeInOut(duration: 0.5), value: isChartVisible)
-                }
-
                 VStack {
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -89,19 +52,24 @@ struct HomeView: View {
                             Text("Upload")
                                 .font(.system(size: 16, weight: .semibold))
                         }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                         .background(
-                            Capsule()
-                                .fill(Color.blue)
-                                .shadow(color: .gray.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .ultraThinMaterial,
+                            in: Capsule()
                         )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 3)
                         .scaleEffect(showDocumentPicker ? 0.96 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: showDocumentPicker)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .padding()
+
 
                     if let selectedFile = selectedFile {
                         Text("Selected File: \(selectedFile.lastPathComponent)")
@@ -157,4 +125,8 @@ struct HomeView: View {
 
 extension Notification.Name {
     static let fileUploaded = Notification.Name("FileUploaded")
+}
+
+#Preview{
+    HomeView(webSocketManager: WebSocketManager())
 }
