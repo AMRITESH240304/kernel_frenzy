@@ -7,7 +7,7 @@ from config import settings
 from ws.ws_manager import manager
 from service.db.db import supabase
 from service.models.model import *
-
+from time import sleep
 router = APIRouter()
 
 @router.get("/hello")
@@ -22,10 +22,13 @@ async def websocket_endpoint(websocket: WebSocket):
             cpu_usage = psutil.cpu_percent(interval=1)
             memory_usage = psutil.virtual_memory().percent
 
-            data = {"cpu": cpu_usage, "memory": memory_usage}
-            await manager.send_personal_message(json.dumps(data), websocket)
+            await manager.broadcast(json.dumps({
+                "type": "metrics",
+                "cpu": cpu_usage,
+                "memory": memory_usage
+            }))
 
-            await asyncio.sleep(1)  
+            await asyncio.sleep(1)
 
     except WebSocketDisconnect:
         print("🔌 WebSocket disconnected gracefully.")
@@ -44,10 +47,24 @@ def get_user_info(userInfo:UserInfo):
 async def upload_csv(user_id: str = Form(), file: UploadFile = File(...)):
     try:
         user_check = supabase.table("user").select("id").eq("id", user_id).execute()
+        await manager.broadcast(json.dumps({
+            "type": "upload_status",
+            "message": 0.3
+        }))
+        sleep(2)
 
         if not user_check.data:
+            await manager.broadcast(json.dumps({
+                "type": "upload_status",
+                "message": 0.8
+            }))
             raise HTTPException(status_code=403, detail="User ID not found. Upload not allowed.")
 
+        await manager.broadcast(json.dumps({
+            "type": "upload_status",
+            "message": 0.9
+        }))
+        sleep(2)
         bucket_name = "csv_files"
         file_content = await file.read()
         file_path = f"{user_id}/{file.filename}"  
@@ -63,6 +80,10 @@ async def upload_csv(user_id: str = Form(), file: UploadFile = File(...)):
         )
 
         public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+        await manager.broadcast(json.dumps({
+            "type": "upload_status",
+            "message": 1
+        }))
 
         return {"message": "File uploaded successfully", "url": public_url}
 
