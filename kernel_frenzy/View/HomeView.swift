@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var cpuDataPoints: [(Date, Double)] = []
     @State private var memoryDataPoints: [(Date, Double)] = []
     @State private var isChartVisible: Bool = false
+    @State private var isUploading:Bool = false
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -72,8 +73,25 @@ struct HomeView: View {
 
 
                     if let selectedFile = selectedFile {
-                        Text("Selected File: \(selectedFile.lastPathComponent)")
-                            .foregroundColor(.blue)
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 50)
+                            .overlay(
+                                HStack {
+                                    Image(systemName: "doc.text")
+                                        .foregroundColor(.blue)
+                                    Text(selectedFile.lastPathComponent)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                    Spacer()
+                                    if isUploading {
+                                        ProgressView(value: webSocketManager.uploadProgress)
+                                            .progressViewStyle(LinearProgressViewStyle())
+                                    }
+                                }
+                                .padding(.horizontal)
+                            )
                             .padding()
                     }
                 }
@@ -84,10 +102,13 @@ struct HomeView: View {
                         // Handle file selection
                         Task {
                             do {
+                                isUploading = true
                                 try await Post().uploadFile(selectedFile!)
                                 NotificationCenter.default.post(name: .fileUploaded, object: nil)
+                                isUploading = false
                             } catch {
                                 print("Error uploading file: \(error)")
+                                isUploading = false
                             }
                         }
                     }

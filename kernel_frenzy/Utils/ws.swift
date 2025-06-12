@@ -5,6 +5,8 @@ import Combine
 class WebSocketManager: ObservableObject {
     @Published var cpuUsage: Double = 0.0
     @Published var memoryUsage: Double = 0.0
+    @Published var uploadStatus: String = "Idle"
+    @Published var uploadProgress: Double = 0.0
     
     private var urlSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
@@ -43,14 +45,25 @@ class WebSocketManager: ObservableObject {
             }
         }
     }
-    
+
     func parseAndUpdateGraph(from jsonString: String) {
         guard let jsonData = jsonString.data(using: .utf8) else { return }
         
         do {
-            let decodedData = try JSONDecoder().decode([String: Double].self, from: jsonData)
-            self.cpuUsage = decodedData["cpu"] ?? 0.0
-            self.memoryUsage = decodedData["memory"] ?? 0.0
+            if let json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+               let type = json["type"] as? String {
+                switch type {
+                case "metrics":
+                    self.cpuUsage = json["cpu"] as? Double ?? 0.0
+                    self.memoryUsage = json["memory"] as? Double ?? 0.0
+
+                case "upload_status":
+                    self.uploadProgress = json["message"] as? Double ?? 0.0
+
+                default:
+                    print("⚠️ Unknown type received: \(type)")
+                }
+            }
         } catch {
             print("❌ Decoding error: \(error)")
         }

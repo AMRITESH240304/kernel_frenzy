@@ -56,14 +56,10 @@ class Post {
             print("User ID not found in UserDefaults")
             return
         }
-
         guard
-            let serverURL = URL(
-                string: "https://kernel-frenzy.onrender.com/uploadcsv")
-        else {
-            print("Invalid URL")
-            return
-        }
+            let serverURL = NetworkURL.baseURL
+                .appendingPathComponent("uploadcsv") as URL?
+        else { return }
 
         guard let fileData = try? Data(contentsOf: fileUrl) else {
             print("Failed to read file data")
@@ -187,7 +183,7 @@ class Post {
     }
 
     func saveUserInfo(_ id: UUID, _ name: String, _ email: String) async {
-        let urlString = "http://10.3.251.71:8000/userinfo"
+        let urlString = "https://kernel-frenzy.onrender.com/userinfo"
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
             return
