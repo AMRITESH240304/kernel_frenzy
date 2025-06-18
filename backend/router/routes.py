@@ -43,6 +43,53 @@ def get_user_info(userInfo:UserInfo):
     supabase.table("user").insert(userInfo.model_dump()).execute()
     return {"message": "User info added successfully!"}
 
+@router.get("/startTraining/{user_id}/{file_name}")
+async def start_training(user_id: str, file_name: str):
+    try:
+        print(f"Starting training for user: {user_id} with file: {file_name}")
+        await manager.broadcast(json.dumps({
+            "type": "training_status",
+            "message": 0.1
+        }))
+        print("Broadcasting training status 0.1")
+        sleep(2)
+        user_check = supabase.table("user").select("id").eq("id", user_id).execute()
+        
+        if not user_check.data:
+            await manager.broadcast(json.dumps({
+                "type": "training_status",
+                "message": 0.2
+            }))
+            raise HTTPException(status_code=403, detail="User ID not found. Training not allowed.")
+        print("User ID check passed")
+        await manager.broadcast(json.dumps({
+            "type": "training_status",
+            "message": 0.3
+        }))
+        sleep(2)
+        print("Checking file existence in storage")
+        
+        bucket_name = "csv_files"
+        file_path = f"{user_id}/{file_name}"
+        file_exists = supabase.storage.from_(bucket_name).get_public_url(file_path)
+        if not file_exists:
+            await manager.broadcast(json.dumps({
+                "type": "training_status",
+                "message": 0.4
+            }))
+            raise HTTPException(status_code=404, detail="File not found. Training cannot proceed.")
+        print("File existence check passed")
+        await manager.broadcast(json.dumps({
+            "type": "training_status",
+            "message": 1
+        }))
+        sleep(2)
+        
+        return {"message": "Training started successfully", "file_path": file_path}
+    except Exception as e:
+        print(f"Error during training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/uploadcsv")
 async def upload_csv(user_id: str = Form(), file: UploadFile = File(...)):
     try:
