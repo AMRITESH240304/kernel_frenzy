@@ -4,6 +4,7 @@ struct AccountView: View {
     @State private var searchText = ""
     @State private var files: [FileItem] = []
     @State private var isLoading = false
+    @ObservedObject var webSocketManager: WebSocketManager
     
     private let cacheKey = "CachedFiles"
     
@@ -30,6 +31,7 @@ struct AccountView: View {
                         ForEach(files) { file in
                             FileCardView(
                                 file: file,
+                                webSocketManager: webSocketManager,
                                 deleteAction: {
                                     Task {
                                         do {
@@ -89,6 +91,7 @@ struct AccountView: View {
 
 struct FileCardView: View {
     let file: FileItem
+    @ObservedObject var webSocketManager: WebSocketManager
     let deleteAction: () -> Void
     
     @State private var isTraining = false
@@ -111,13 +114,12 @@ struct FileCardView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 } else if isTraining {
-                    ProgressView(value: trainingProgress, total: 1.0)
+                    ProgressView(value: webSocketManager.trainingStatus, total: 1.0)
                         .progressViewStyle(LinearProgressViewStyle())
                         .padding(.vertical, 5)
                     
                     Button(action: {
                         isTraining = false
-                        trainingProgress = 0.0
                     }) {
                         Text("Cancel")
                             .padding()
@@ -127,7 +129,11 @@ struct FileCardView: View {
                     }
                 } else {
                     Button(action: {
-                        startTraining()
+                        Task{
+                            isTraining = true
+                            webSocketManager.connectWebSocket()
+                            try await Post().startTraining(file.name)
+                        }
                     }) {
                         Text("Start Training")
                             .padding()
@@ -135,7 +141,15 @@ struct FileCardView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                     }
+                    .onChange(of: webSocketManager.trainingStatus) { newValue in
+                        if newValue >= 1.0 {
+                            isTraining = false
+                            isTrained = true
+                            webSocketManager.disconnect()
+                        }
+                    }
                 }
+                
             }
             Spacer()
             Button(action: deleteAction) {
@@ -150,7 +164,7 @@ struct FileCardView: View {
     }
     
     private func startTraining() {
-//        isTraining = true
+        isTraining = true
 //        trainingProgress = 0.0
 //        
 //        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
@@ -163,8 +177,4 @@ struct FileCardView: View {
 //            }
 //        }
     }
-}
-
-#Preview {
-    AccountView()
 }

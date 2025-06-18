@@ -7,6 +7,7 @@ class WebSocketManager: ObservableObject {
     @Published var memoryUsage: Double = 0.0
     @Published var uploadStatus: String = "Idle"
     @Published var uploadProgress: Double = 0.0
+    @Published var trainingStatus: Double = 0.0
     
     private var urlSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
@@ -17,7 +18,7 @@ class WebSocketManager: ObservableObject {
     }
     
     func connectWebSocket() {
-        guard let url = NetworkURL.ws as URL? else { return }
+        guard let url = NetworkURL.localhostWS as URL? else { return }
         urlSession = URLSession(configuration: .default)
         webSocketTask = urlSession?.webSocketTask(with: url)
         webSocketTask?.resume()
@@ -59,6 +60,9 @@ class WebSocketManager: ObservableObject {
 
                 case "upload_status":
                     self.uploadProgress = json["message"] as? Double ?? 0.0
+                    
+                case "training_status":
+                    self.trainingStatus = json["message"] as? Double ?? 0.0
 
                 default:
                     print("⚠️ Unknown type received: \(type)")

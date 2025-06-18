@@ -16,7 +16,7 @@ struct TabsView: View {
                     Label("Home", systemImage: "house")
                 }
 
-            AccountView()
+            AccountView(webSocketManager:webSocketManager)
                 .tabItem {
                     Label("File", systemImage: "filemenu.and.selection")
                 }

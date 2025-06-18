@@ -181,6 +181,47 @@ class Post {
         }
 
     }
+    
+    func startTraining(_ fileName:String) async throws {
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        guard let url = NetworkURL.localhost.appendingPathComponent("startTraining").appendingPathComponent(userId).appendingPathComponent(fileName) as URL? else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        let task: Void = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Error: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("Invalid response")
+                return
+            }
+            
+            guard let data = data else {
+                print("No data received")
+                return
+            }
+            
+            do {
+                let jsonObject = try JSONSerialization.jsonObject(
+                    with: data, options: [])
+                let jsonData = try JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
+                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Unable to decode JSON"
+                print(jsonString)
+
+            } catch {
+                print("JSON decoding error: \(error)")
+            }
+        }.resume()
+
+    }
 
     func saveUserInfo(_ id: UUID, _ name: String, _ email: String) async {
         let urlString = "https://kernel-frenzy.onrender.com/userinfo"
